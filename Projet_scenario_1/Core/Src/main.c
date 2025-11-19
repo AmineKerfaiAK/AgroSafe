@@ -103,7 +103,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         if (ldrState != GPIO_PIN_SET)
         {
             currentMode = MODE_JOUR;
-            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);   // Blue LED OFF
+            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
 
             HD44780_Clear();
             HD44780_SetCursor(0,0);
@@ -114,7 +114,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         else
         {
             currentMode = MODE_NUIT;
-            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);     // Blue LED ON
+            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
 
             HD44780_Clear();
             HD44780_SetCursor(0,0);
