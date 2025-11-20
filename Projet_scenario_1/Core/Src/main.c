@@ -66,12 +66,11 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    // 1) BUTTON interrupt → toggle system
     if (GPIO_Pin == Button_Pin)
     {
-        status = !status;  // toggle
+        status = !status;
 
-        if (status) // SYSTEM ON
+        if (status)
         {
             HAL_GPIO_WritePin(GPIOD, Green_Pin, GPIO_PIN_SET);
             HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
@@ -82,7 +81,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             HD44780_SetCursor(0,1);
             HD44780_PrintStr("ON");
         }
-        else // SYSTEM OFF
+        else
         {
             HAL_GPIO_WritePin(GPIOD, Green_Pin, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
@@ -95,7 +94,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
     }
 
-    // 2) LDR interrupt → check light only if SYSTEM ON
     if ((GPIO_Pin == GPIO_PIN_0) && status)
     {
         GPIO_PinState ldrState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
@@ -124,15 +122,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
     }
 
-    // 3) Soil humidity sensor interrupt → only if SYSTEM ON
     if ((GPIO_Pin == GPIO_PIN_1) && status)
     {
         GPIO_PinState soilState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
 
         if (soilState == GPIO_PIN_SET)
         {
-            // Soil is dry
-            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_SET);  // LED orange ON
+            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_SET);
             HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
             buzzer_on=1;
 
@@ -144,9 +140,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
         else
         {
-            // Soil is wet
         	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET); // LED orange OFF
+            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET);
             HD44780_Clear();
             HD44780_SetCursor(0,0);
             HD44780_PrintStr("Sol humide");
@@ -206,13 +201,14 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  if(buzzer_on==1)
-	  {
-		  HAL_Delay(500);
-		  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
-		  buzzer_on=0;
-	  }
+
     /* USER CODE BEGIN 3 */
+	  if(buzzer_on==1)
+	  	  {
+	  		  HAL_Delay(500);
+	  		  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+	  		  buzzer_on=0;
+	  	  }
 
 
   }
