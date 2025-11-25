@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "liquidcrystal_i2c.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,13 +44,18 @@ typedef enum {
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
 int status=0;
 int buzzer_on=0;
+int flame_buzzer=0;
 ModeLuminosite currentMode = MODE_JOUR;
 /* USER CODE END PV */
 
@@ -58,6 +64,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM6_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -66,23 +75,24 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    // 1) BUTTON interrupt → toggle system
+
     if (GPIO_Pin == Button_Pin)
     {
-        status = !status;  // toggle
+        status = !status;
 
-        if (status) // SYSTEM ON
+        if (status)
         {
             HAL_GPIO_WritePin(GPIOD, Green_Pin, GPIO_PIN_SET);
             HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOD, Red_Pin, GPIO_PIN_RESET);
             HD44780_Clear();
             HD44780_SetCursor(0,0);
             HD44780_PrintStr("SYSTEM");
             HD44780_SetCursor(0,1);
             HD44780_PrintStr("ON");
         }
-        else // SYSTEM OFF
+        else
         {
             HAL_GPIO_WritePin(GPIOD, Green_Pin, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
@@ -95,7 +105,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
     }
 
-    // 2) LDR interrupt → check light only if SYSTEM ON
+
     if ((GPIO_Pin == GPIO_PIN_0) && status)
     {
         GPIO_PinState ldrState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
@@ -103,7 +113,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         if (ldrState != GPIO_PIN_SET)
         {
             currentMode = MODE_JOUR;
-            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);   // Blue LED OFF
+            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
 
             HD44780_Clear();
             HD44780_SetCursor(0,0);
@@ -114,7 +124,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         else
         {
             currentMode = MODE_NUIT;
-            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);     // Blue LED ON
+            HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
 
             HD44780_Clear();
             HD44780_SetCursor(0,0);
@@ -124,15 +134,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
     }
 
-    // 3) Soil humidity sensor interrupt → only if SYSTEM ON
     if ((GPIO_Pin == GPIO_PIN_1) && status)
     {
         GPIO_PinState soilState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
 
         if (soilState == GPIO_PIN_SET)
         {
-            // Soil is dry
-            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_SET);  // LED orange ON
+
+            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_SET);
             HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
             buzzer_on=1;
 
@@ -144,9 +153,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
         else
         {
-            // Soil is wet
-        	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET); // LED orange OFF
+
+        	HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+            HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET);
             HD44780_Clear();
             HD44780_SetCursor(0,0);
             HD44780_PrintStr("Sol humide");
@@ -156,7 +165,50 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 }
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim->Instance == TIM6)
+	{
+		HAL_ADC_Start_IT(&hadc1);
+	}
+	else if (htim->Instance == TIM7)
+	{
+	     HAL_TIM_Base_Stop_IT(&htim7);
+	}
+}
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    if (hadc->Instance == ADC1)
+    {
+        uint16_t raw = HAL_ADC_GetValue(hadc);
+        float vref = 3.3f;
+        float step = vref / 4096.0f;
+        float voltage = raw * step;
+        float temp_c = voltage / 0.01f;
 
+        GPIO_PinState flame = HAL_GPIO_ReadPin(GPIOA, Flame_Pin);
+
+        if (flame == GPIO_PIN_RESET)
+        {
+        	status=0;
+        	flame_buzzer=1;
+        	HD44780_Clear();
+        	HD44780_SetCursor(0,0);
+        	HD44780_PrintStr("Flamme detectee");
+        	HD44780_SetCursor(0,1);
+        	HD44780_PrintStr("Arret systeme");
+        	HAL_GPIO_WritePin(GPIOD, Red_Pin, GPIO_PIN_SET);
+        	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+        }
+        else if (temp_c > 35.0f)
+        {
+
+        	//HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
+        }
+
+        HAL_ADC_Stop_IT(hadc);
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -191,7 +243,15 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
+  MX_ADC1_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+  //INIT
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
+
+  //LCD DEFAULT
   HD44780_Init(2);
   HD44780_Clear();
   HD44780_SetCursor(0,0);
@@ -206,16 +266,23 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+
 	  if(buzzer_on==1)
 	  {
 		  HAL_Delay(500);
 		  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
 		  buzzer_on=0;
 	  }
-    /* USER CODE BEGIN 3 */
-
-
+	  if(flame_buzzer==1)
+	  {
+		  HAL_Delay(1000);
+		  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+		  flame_buzzer=0;
+	  }
   }
+
   /* USER CODE END 3 */
 }
 
@@ -262,6 +329,58 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -374,6 +493,82 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 4999;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 19999;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 4999;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 65535;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -394,7 +589,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, Green_Pin|Orange_Pin|Blue_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, Green_Pin|Orange_Pin|Red_Pin|Blue_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -408,8 +603,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Green_Pin Orange_Pin Blue_Pin */
-  GPIO_InitStruct.Pin = Green_Pin|Orange_Pin|Blue_Pin;
+  /*Configure GPIO pins : Green_Pin Orange_Pin Red_Pin Blue_Pin */
+  GPIO_InitStruct.Pin = Green_Pin|Orange_Pin|Red_Pin|Blue_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -420,6 +615,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(Button_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Flame_Pin */
+  GPIO_InitStruct.Pin = Flame_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Flame_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);

@@ -63,11 +63,15 @@ void Error_Handler(void);
 #define Green_GPIO_Port GPIOD
 #define Orange_Pin GPIO_PIN_13
 #define Orange_GPIO_Port GPIOD
+#define Red_Pin GPIO_PIN_14
+#define Red_GPIO_Port GPIOD
 #define Blue_Pin GPIO_PIN_15
 #define Blue_GPIO_Port GPIOD
 #define Button_Pin GPIO_PIN_6
 #define Button_GPIO_Port GPIOC
 #define Button_EXTI_IRQn EXTI9_5_IRQn
+#define Flame_Pin GPIO_PIN_10
+#define Flame_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 
