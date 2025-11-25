@@ -75,7 +75,6 @@ static void MX_TIM7_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-
     if (GPIO_Pin == Button_Pin)
     {
         status = !status;
@@ -104,7 +103,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             HD44780_PrintStr("OFF");
         }
     }
-
 
     if ((GPIO_Pin == GPIO_PIN_0) && status)
     {
@@ -140,7 +138,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
         if (soilState == GPIO_PIN_SET)
         {
-
             HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_SET);
             HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
             buzzer_on=1;
