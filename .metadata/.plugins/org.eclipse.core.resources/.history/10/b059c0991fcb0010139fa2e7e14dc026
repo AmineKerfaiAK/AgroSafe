@@ -271,7 +271,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 
         }
-        HAL_TIM_Base_Start_IT(&htim7);
+
         HAL_ADC_Stop_IT(hadc);
     }
 }
@@ -316,7 +316,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //INIT
   HAL_TIM_Base_Start_IT(&htim6);
-
+  HAL_TIM_Base_Start_IT(&htim7);
 
   //LCD DEFAULT
   HD44780_Init(2);

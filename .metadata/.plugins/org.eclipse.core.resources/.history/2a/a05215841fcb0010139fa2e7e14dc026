@@ -271,7 +271,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 
         }
-        HAL_TIM_Base_Start_IT(&htim7);
+
         HAL_ADC_Stop_IT(hadc);
     }
 }
