@@ -170,7 +170,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 	else if (htim->Instance == TIM7)
 	{
-	     HAL_TIM_Base_Stop_IT(&htim7);
+		HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOD, Red_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOE, Pompe_Pin, GPIO_PIN_RESET);
+		HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+	    HAL_TIM_Base_Stop_IT(&htim7);
 	}
 }
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
@@ -265,6 +270,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_SET);
 
 	  if(buzzer_on==1)
 	  {
@@ -277,6 +283,12 @@ int main(void)
 		  HAL_Delay(1000);
 		  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
 		  flame_buzzer=0;
+		  HD44780_Clear();
+		  HD44780_SetCursor(0,0);
+		  HD44780_PrintStr("Appuyer sur");
+		  HD44780_SetCursor(0,1);
+		  HD44780_PrintStr("le button");
+
 	  }
   }
 
@@ -547,7 +559,7 @@ static void MX_TIM7_Init(void)
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 4999;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 65535;
+  htim7.Init.Period = 29999;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
@@ -578,15 +590,25 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, Green_Pin|Orange_Pin|Red_Pin|Blue_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : Pompe_Pin */
+  GPIO_InitStruct.Pin = Pompe_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(Pompe_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
