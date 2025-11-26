@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "liquidcrystal_i2c.h"
 #include <stdio.h>
+#include <string.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +33,9 @@ typedef enum {
   MODE_JOUR = 0,
   MODE_NUIT
 } ModeLuminosite;
+
+
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -52,27 +57,67 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
+DMA_HandleTypeDef hdma_memtomem_dma2_stream0;
 /* USER CODE BEGIN PV */
 int status=0;
 int buzzer_on=0;
 int flame_buzzer=0;
 ModeLuminosite currentMode = MODE_JOUR;
+char alertMemory[5][20] = {
+    "Aucune",
+    "Aucune",
+    "Aucune",
+    "Aucune",
+    "Aucune"
+};
+char dmaSource[40];
+char dmaDest[40];
+char dmaBuffer[40];
+uint8_t alertIndex = 0;
+uint8_t flag=0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
+void AddAlert(const char* txt);
+void PrepareLastTwoAlerts(void);
+void LCD_Show(char *txt);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void AddAlert(const char* txt)
+{
+    strncpy(alertMemory[alertIndex], txt, 20);
+    alertIndex = (alertIndex + 1) % 5;
+}
+
+void PrepareLastTwoAlerts(void)
+{
+    uint8_t last1 = (alertIndex + 4) % 5;
+    uint8_t last2 = (alertIndex + 3) % 5;
+
+    // Ensure string fits in buffer
+    snprintf(dmaSource, sizeof(dmaSource),
+             "1:%s\n2:%s",
+             alertMemory[last1],
+             alertMemory[last2]);
+    dmaSource[sizeof(dmaSource) - 1] = '\0';  // Force null-terminate
+}
+
+
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (GPIO_Pin == Button_Pin)
@@ -147,6 +192,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             HD44780_PrintStr("Sol sec -");
             HD44780_SetCursor(0,1);
             HD44780_PrintStr("Pompe active");
+            HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_SET);
+            AddAlert("Sec");
+
+
+
         }
         else
         {
@@ -158,7 +208,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             HD44780_PrintStr("Sol humide");
             HD44780_SetCursor(0,1);
             HD44780_PrintStr("Pas d'action");
+            HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_RESET);
         }
+    }
+    if((GPIO_Pin == Alert_Pin)&& status)
+    {
+
+
+    	flag= 1;
+
+
+
+
+
     }
 }
 
@@ -174,6 +236,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		HAL_GPIO_WritePin(GPIOD, Orange_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOD, Red_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOE, Pompe_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOE, Ventilateur_Pin, GPIO_PIN_RESET);
+
 		HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
 	    HAL_TIM_Base_Stop_IT(&htim7);
 	}
@@ -184,15 +248,14 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     {
         uint16_t raw = HAL_ADC_GetValue(hadc);
         float vref = 3.3f;
-        float step = vref / 4096.0f;
-        float voltage = raw * step;
-        float temp_c = voltage / 0.01f;
+        float voltage = (raw * vref) / 4096.0f;
+        float temp_c = voltage * 10.0f;
 
         GPIO_PinState flame = HAL_GPIO_ReadPin(GPIOA, Flame_Pin);
 
         if (flame == GPIO_PIN_RESET)
         {
-        	status=0;
+        	//status=0;
         	flame_buzzer=1;
         	HD44780_Clear();
         	HD44780_SetCursor(0,0);
@@ -201,11 +264,17 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
         	HD44780_PrintStr("Arret systeme");
         	HAL_GPIO_WritePin(GPIOD, Red_Pin, GPIO_PIN_SET);
         	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+        	AddAlert("Flamme");
+
         }
+
         else if (temp_c > 35.0f)
         {
+        	HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
+        	HAL_GPIO_WritePin(GPIOE, Ventilateur_Pin, GPIO_PIN_SET);
+        	AddAlert("Haute Temp");
 
-        	//HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
+
         }
 
         HAL_ADC_Stop_IT(hadc);
@@ -243,6 +312,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM6_Init();
@@ -257,9 +327,14 @@ int main(void)
   HD44780_Init(2);
   HD44780_Clear();
   HD44780_SetCursor(0,0);
+
   HD44780_PrintStr("Appuyer sur");
   HD44780_SetCursor(0,1);
   HD44780_PrintStr("le button");
+
+
+
+
 
   /* USER CODE END 2 */
 
@@ -270,7 +345,32 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_SET);
+	  if(flag==1)
+	  {
+		  HAL_Delay(20); // simple debounce
+		  PrepareLastTwoAlerts();
+
+		  HAL_DMA_Start(&hdma_memtomem_dma2_stream0,(uint32_t)dmaSource,(uint32_t)dmaDest,strlen(dmaSource) + 1);
+		  HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100);
+
+		  HD44780_Clear();
+		  HD44780_SetCursor(0,0); // THIS LINE FIXES EVERYTHING
+		  HD44780_PrintStr(dmaDest);
+		  flag=0;
+		  HAL_Delay(5000); // simple debounce
+
+	  }
+
+
+	  if(HAL_GPIO_ReadPin(GPIOC, Alert_Pin)==GPIO_PIN_RESET)
+
+	  	  {
+      	HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
+
+	  	  }
+	  else
+	      HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_RESET);
+
 
 	  if(buzzer_on==1)
 	  {
@@ -290,6 +390,11 @@ int main(void)
 		  HD44780_PrintStr("le button");
 
 	  }
+
+
+
+	  //    // update twice per second
+
   }
 
   /* USER CODE END 3 */
@@ -578,6 +683,38 @@ static void MX_TIM7_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  * Configure DMA for memory to memory transfers
+  *   hdma_memtomem_dma2_stream0
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* Configure DMA request hdma_memtomem_dma2_stream0 on DMA2_Stream0 */
+  hdma_memtomem_dma2_stream0.Instance = DMA2_Stream0;
+  hdma_memtomem_dma2_stream0.Init.Channel = DMA_CHANNEL_0;
+  hdma_memtomem_dma2_stream0.Init.Direction = DMA_MEMORY_TO_MEMORY;
+  hdma_memtomem_dma2_stream0.Init.PeriphInc = DMA_PINC_ENABLE;
+  hdma_memtomem_dma2_stream0.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_memtomem_dma2_stream0.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+  hdma_memtomem_dma2_stream0.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+  hdma_memtomem_dma2_stream0.Init.Mode = DMA_NORMAL;
+  hdma_memtomem_dma2_stream0.Init.Priority = DMA_PRIORITY_LOW;
+  hdma_memtomem_dma2_stream0.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+  hdma_memtomem_dma2_stream0.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+  hdma_memtomem_dma2_stream0.Init.MemBurst = DMA_MBURST_SINGLE;
+  hdma_memtomem_dma2_stream0.Init.PeriphBurst = DMA_PBURST_SINGLE;
+  if (HAL_DMA_Init(&hdma_memtomem_dma2_stream0) != HAL_OK)
+  {
+    Error_Handler( );
+  }
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -598,17 +735,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Pompe_GPIO_Port, Pompe_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, Pompe_Pin|Ventilateur_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, Green_Pin|Orange_Pin|Red_Pin|Blue_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : Pompe_Pin */
-  GPIO_InitStruct.Pin = Pompe_Pin;
+  /*Configure GPIO pins : Pompe_Pin Ventilateur_Pin */
+  GPIO_InitStruct.Pin = Pompe_Pin|Ventilateur_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Pompe_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -621,6 +758,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Alert_Pin */
+  GPIO_InitStruct.Pin = Alert_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(Alert_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Green_Pin Orange_Pin Red_Pin Blue_Pin */
   GPIO_InitStruct.Pin = Green_Pin|Orange_Pin|Red_Pin|Blue_Pin;
@@ -651,6 +794,9 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
 
@@ -659,6 +805,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 

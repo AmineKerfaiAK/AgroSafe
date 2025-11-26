@@ -61,6 +61,11 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define Pompe_Pin GPIO_PIN_2
 #define Pompe_GPIO_Port GPIOE
+#define Ventilateur_Pin GPIO_PIN_3
+#define Ventilateur_GPIO_Port GPIOE
+#define Alert_Pin GPIO_PIN_14
+#define Alert_GPIO_Port GPIOE
+#define Alert_EXTI_IRQn EXTI15_10_IRQn
 #define Green_Pin GPIO_PIN_12
 #define Green_GPIO_Port GPIOD
 #define Orange_Pin GPIO_PIN_13
