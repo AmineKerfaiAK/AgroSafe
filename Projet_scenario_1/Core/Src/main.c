@@ -266,10 +266,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
         }
 
-        else if (temp_c > 35.0f)
+        else if (temp_c > 10.0f)
         {
         	HAL_GPIO_WritePin(GPIOD, Blue_Pin, GPIO_PIN_SET);
         	HAL_GPIO_WritePin(GPIOE, Ventilateur_Pin, GPIO_PIN_SET);
+        	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+        	buzzer_on=1;
+
         	AddAlert("Haute Temp");
 
 
