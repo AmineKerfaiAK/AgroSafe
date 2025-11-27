@@ -215,6 +215,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     {
 
     	flag= 1;
+    	PrepareLastTwoAlerts();
+
+    			  HAL_DMA_Start(&hdma_memtomem_dma2_stream0,(uint32_t)dmaSource,(uint32_t)dmaDest,strlen(dmaSource) + 1);
 
     }
 }
@@ -343,16 +346,16 @@ int main(void)
 	  if(flag==1)
 	  {
 		  HAL_Delay(20);
-		  PrepareLastTwoAlerts();
 
-		  HAL_DMA_Start(&hdma_memtomem_dma2_stream0,(uint32_t)dmaSource,(uint32_t)dmaDest,strlen(dmaSource) + 1);
 		  HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100);
-
 		  HD44780_Clear();
+
 		  HD44780_SetCursor(0,0);
 		  HD44780_PrintStr(dmaDest);
 		  flag=0;
 		  HAL_Delay(5000);
+		  HD44780_Clear();
+
 
 	  }
 
