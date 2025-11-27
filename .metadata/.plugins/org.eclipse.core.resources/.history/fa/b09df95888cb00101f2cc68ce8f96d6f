@@ -356,11 +356,23 @@ int main(void)
 		  HD44780_PrintStr(dmaDest);
 		  flag=0;
 		  HAL_Delay(5000);
+		  if(status==1)
+		  {
+
 			  HD44780_Clear();
 			  HD44780_SetCursor(0,0);
 			  HD44780_PrintStr("SYSTEM");
 			  HD44780_SetCursor(0,1);
 			  HD44780_PrintStr("ON");
+		  }
+		  else
+		  {
+			  HD44780_Clear();
+			  HD44780_SetCursor(0,0);
+			  HD44780_PrintStr("SYSTEM");
+			  HD44780_SetCursor(0,1);
+			  HD44780_PrintStr("ON");
+		  }
 
 
 	  }

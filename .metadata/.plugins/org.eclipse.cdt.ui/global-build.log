@@ -1257,3 +1257,100 @@ Finished building: Projet_scenario_1.hex
  
 Finished building: Projet_scenario_1.list
  
+12:26:10 **** Build of configuration Debug for project Projet_scenario_1 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F407xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'PrepareLastTwoAlerts':
+../Core/Src/main.c:113:23: warning: '%s' directive output may be truncated writing up to 19 bytes into a region of size between 16 and 35 [-Wformat-truncation=]
+  113 |              "1:%s\n2:%s",
+      |                       ^~
+../Core/Src/main.c:112:5: note: 'snprintf' output between 6 and 44 bytes into a destination of size 40
+  112 |     snprintf(dmaSource, sizeof(dmaSource),
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  113 |              "1:%s\n2:%s",
+      |              ~~~~~~~~~~~~~
+  114 |              alertMemory[last1],
+      |              ~~~~~~~~~~~~~~~~~~~
+  115 |              alertMemory[last2]);
+      |              ~~~~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "Projet_scenario_1.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\lazer\Desktop\AgroSafe\Projet_scenario_1\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Projet_scenario_1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: Projet_scenario_1.elf
+ 
+arm-none-eabi-size  Projet_scenario_1.elf 
+arm-none-eabi-objdump -h -S Projet_scenario_1.elf  > "Projet_scenario_1.list"
+arm-none-eabi-objcopy  -O ihex Projet_scenario_1.elf  "Projet_scenario_1.hex"
+   text	   data	    bss	    dec	    hex	filename
+  37380	    584	   2480	  40444	   9dfc	Projet_scenario_1.elf
+Finished building: default.size.stdout
+ 
+Finished building: Projet_scenario_1.hex
+ 
+Finished building: Projet_scenario_1.list
+ 
+12:58:25 **** Incremental Build of configuration Debug for project Projet_scenario_1 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F407xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'PrepareLastTwoAlerts':
+../Core/Src/main.c:113:23: warning: '%s' directive output may be truncated writing up to 19 bytes into a region of size between 16 and 35 [-Wformat-truncation=]
+  113 |              "1:%s\n2:%s",
+      |                       ^~
+../Core/Src/main.c:112:5: note: 'snprintf' output between 6 and 44 bytes into a destination of size 40
+  112 |     snprintf(dmaSource, sizeof(dmaSource),
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  113 |              "1:%s\n2:%s",
+      |              ~~~~~~~~~~~~~
+  114 |              alertMemory[last1],
+      |              ~~~~~~~~~~~~~~~~~~~
+  115 |              alertMemory[last2]);
+      |              ~~~~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "Projet_scenario_1.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\lazer\Desktop\AgroSafe\Projet_scenario_1\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Projet_scenario_1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: Projet_scenario_1.elf
+ 
+arm-none-eabi-size  Projet_scenario_1.elf 
+arm-none-eabi-objdump -h -S Projet_scenario_1.elf  > "Projet_scenario_1.list"
+arm-none-eabi-objcopy  -O ihex Projet_scenario_1.elf  "Projet_scenario_1.hex"
+   text	   data	    bss	    dec	    hex	filename
+  37468	    584	   2480	  40532	   9e54	Projet_scenario_1.elf
+Finished building: default.size.stdout
+ 
+Finished building: Projet_scenario_1.hex
+ 
+Finished building: Projet_scenario_1.list
+ 
+12:59:34 **** Incremental Build of configuration Debug for project Projet_scenario_1 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F407xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'PrepareLastTwoAlerts':
+../Core/Src/main.c:113:23: warning: '%s' directive output may be truncated writing up to 19 bytes into a region of size between 16 and 35 [-Wformat-truncation=]
+  113 |              "1:%s\n2:%s",
+      |                       ^~
+../Core/Src/main.c:112:5: note: 'snprintf' output between 6 and 44 bytes into a destination of size 40
+  112 |     snprintf(dmaSource, sizeof(dmaSource),
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  113 |              "1:%s\n2:%s",
+      |              ~~~~~~~~~~~~~
+  114 |              alertMemory[last1],
+      |              ~~~~~~~~~~~~~~~~~~~
+  115 |              alertMemory[last2]);
+      |              ~~~~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "Projet_scenario_1.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\lazer\Desktop\AgroSafe\Projet_scenario_1\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Projet_scenario_1.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: Projet_scenario_1.elf
+ 
+arm-none-eabi-size  Projet_scenario_1.elf 
+arm-none-eabi-objdump -h -S Projet_scenario_1.elf  > "Projet_scenario_1.list"
+   text	   data	    bss	    dec	    hex	filename
+  37420	    584	   2480	  40484	   9e24	Projet_scenario_1.elf
+arm-none-eabi-objcopy  -O ihex Projet_scenario_1.elf  "Projet_scenario_1.hex"
+Finished building: default.size.stdout
+ 
+Finished building: Projet_scenario_1.hex
+ 
+Finished building: Projet_scenario_1.list
+ 
+13:00:13 **** Incremental Build of configuration Debug for project Projet_scenario_1 ****
+make -j8 all 
+arm-none-eabi-size  Projet_scenario_1.elf 
+   text	   data	    bss	    dec	    hex	filename
+  37420	    584	   2480	  40484	   9e24	Projet_scenario_1.elf
+Finished building: default.size.stdout
+ 
